@@ -49,12 +49,121 @@ CONDITIONS = {
 EQ_LETTERS = [k for k, v in CONDITIONS.items() if v["is_eq"]]       # A,B,C,D,E
 NEUTRAL_LETTERS = [k for k, v in CONDITIONS.items() if not v["is_eq"]]  # F,G,H,I,J
 
+# ===== 조건 힌트(수수께끼 + 애니메이션) =====
+HINT = {
+    "A": "한산한 무리 🐾 vs 북적이는 무리. 수가 적으면 ‘우연’이 더 크게 작용할까?",
+    "B": "💞 누구와 짝을 이룰까? 아무나? 아니면 닮은 끼리끼리?",
+    "C": "✨ 가끔 글자가 슬쩍 바뀐다. A가 a로, a가 A로?",
+    "D": "🚪 담장 너머에서 새 친구가 들어온다.",
+    "E": "🌿 누구는 더 잘 살아남는다. 모두 똑같이 살아남을까?",
+    "F": "🏁 출발선에서 파랑·빨강 비율을 정한다. 그냥 ‘시작값’일 뿐일까?",
+    "G": "⏳ 얼마나 오래(몇 세대) 지켜볼까? 오래 본다고 달라질까?",
+    "H": "🏃 점이 빠르게 돌아다닌다. 빨리 움직이면 유전자도 변할까?",
+    "I": "🏞️ 배경 풍경 색을 바꾼다. 색이 생존을 바꿀까?",
+    "J": "🎨 같은 친구를 다른 색으로 칠한다. 색만 바뀌면 비율도 바뀔까?",
+}
+
+def _svg(body, vb="0 0 200 96"):
+    return (f'<div style="display:flex;justify-content:center;">'
+            f'<svg viewBox="{vb}" width="200" xmlns="http://www.w3.org/2000/svg">{body}</svg></div>')
+
+ANIM = {}
+# A: 적은 무리 vs 많은 무리
+ANIM["A"] = _svg('''
+<text x="42" y="12" font-size="10" text-anchor="middle" fill="#666">적은 무리</text>
+<text x="155" y="12" font-size="10" text-anchor="middle" fill="#666">많은 무리</text>
+<line x1="100" y1="20" x2="100" y2="92" stroke="#ddd" stroke-dasharray="3 3"/>
+<circle cx="30" cy="45" r="6" fill="#2563eb"/><circle cx="52" cy="60" r="6" fill="#dc2626"/>
+<circle cx="40" cy="78" r="6" fill="#2563eb"/>
+''' + ''.join(
+    f'<circle cx="{120+(i%4)*20}" cy="{35+(i//4)*18}" r="5" fill="{["#2563eb","#dc2626","#16a34a"][i%3]}">'
+    f'<animate attributeName="opacity" values="1;0.3;1" dur="1.6s" begin="{i*0.1}s" repeatCount="indefinite"/></circle>'
+    for i in range(12)))
+
+# B: 끼리끼리 만나는 두 점 + 하트
+ANIM["B"] = _svg('''
+<circle cx="35" cy="50" r="9" fill="#2563eb"><animate attributeName="cx" values="35;78;35" dur="2.4s" repeatCount="indefinite"/></circle>
+<circle cx="165" cy="50" r="9" fill="#2563eb"><animate attributeName="cx" values="165;122;165" dur="2.4s" repeatCount="indefinite"/></circle>
+<text x="100" y="56" font-size="20" text-anchor="middle">💞
+<animate attributeName="opacity" values="0;0;1;0" dur="2.4s" repeatCount="indefinite"/></text>
+<text x="100" y="86" font-size="9" text-anchor="middle" fill="#888">끼리끼리?</text>
+''')
+
+# C: A가 a로 바뀌는 돌연변이
+ANIM["C"] = _svg('''
+<text x="100" y="60" font-size="40" text-anchor="middle" fill="#2563eb" font-weight="bold">A
+<animate attributeName="opacity" values="1;1;0;0;1" dur="3s" repeatCount="indefinite"/></text>
+<text x="100" y="60" font-size="40" text-anchor="middle" fill="#dc2626" font-weight="bold">a
+<animate attributeName="opacity" values="0;0;1;1;0" dur="3s" repeatCount="indefinite"/></text>
+<text x="140" y="30" font-size="22" text-anchor="middle">✨
+<animate attributeName="opacity" values="0;1;0" dur="3s" begin="1.2s" repeatCount="indefinite"/></text>
+''')
+
+# D: 바깥에서 들어오는 이주
+ANIM["D"] = _svg('''
+<rect x="70" y="22" width="110" height="60" rx="8" fill="none" stroke="#999" stroke-width="2"/>
+<circle cx="110" cy="55" r="7" fill="#2563eb"/><circle cx="150" cy="45" r="7" fill="#2563eb"/>
+<circle cx="135" cy="70" r="7" fill="#dc2626"/>
+<circle cx="10" cy="52" r="7" fill="#16a34a"><animate attributeName="cx" values="10;95;95" dur="2.6s" repeatCount="indefinite"/>
+<animate attributeName="opacity" values="1;1;0" dur="2.6s" repeatCount="indefinite"/></circle>
+<text x="30" y="86" font-size="9" text-anchor="middle" fill="#888">바깥 친구</text>
+''')
+
+# E: 일부만 살아남는 선택
+ANIM["E"] = _svg('''
+''' + ''.join(
+    f'<circle cx="{30+i*35}" cy="48" r="9" fill="{["#2563eb","#dc2626","#2563eb","#dc2626","#2563eb"][i]}">'
+    + ('<animate attributeName="opacity" values="1;1;0.1;0.1;1" dur="3s" repeatCount="indefinite"/>' if i in (1,3) else '')
+    + '</circle>'
+    + (f'<text x="{30+i*35}" y="53" font-size="14" text-anchor="middle" fill="#fff">✕<animate attributeName="opacity" values="0;0;1;1;0" dur="3s" repeatCount="indefinite"/></text>' if i in (1,3) else '')
+    for i in range(5))
++ '<text x="100" y="84" font-size="9" text-anchor="middle" fill="#888">누가 살아남나?</text>')
+
+# F: 출발선 비율 막대
+ANIM["F"] = _svg('''
+<text x="100" y="14" font-size="10" text-anchor="middle" fill="#666">🏁 출발 비율</text>
+<rect x="30" y="35" width="140" height="26" rx="4" fill="#dc2626"/>
+<rect x="30" y="35" width="80" height="26" rx="4" fill="#2563eb">
+<animate attributeName="width" values="80;110;50;80" dur="4s" repeatCount="indefinite"/></rect>
+<text x="100" y="82" font-size="9" text-anchor="middle" fill="#888">시작값일 뿐?</text>
+''')
+
+# G: 세대 카운터(모래시계 느낌)
+ANIM["G"] = _svg('''
+<text x="100" y="58" font-size="34" text-anchor="middle">⏳</text>
+<text x="150" y="40" font-size="16" text-anchor="middle" fill="#2563eb" font-weight="bold">1
+<animate attributeName="opacity" values="1;0" dur="0.9s" repeatCount="indefinite"/></text>
+<text x="150" y="40" font-size="16" text-anchor="middle" fill="#16a34a" font-weight="bold">2
+<animate attributeName="opacity" values="0;1;0" dur="0.9s" repeatCount="indefinite"/></text>
+<text x="100" y="86" font-size="9" text-anchor="middle" fill="#888">몇 세대 볼까?</text>
+''')
+
+# H: 빠르게 지나가는 점
+ANIM["H"] = _svg('''
+<circle cx="20" cy="50" r="8" fill="#16a34a"><animate attributeName="cx" values="20;180;20" dur="1s" repeatCount="indefinite"/></circle>
+<text x="100" y="84" font-size="9" text-anchor="middle" fill="#888">🏃 빨리 움직이면?</text>
+''')
+
+# I: 배경색이 바뀜
+ANIM["I"] = _svg('''
+<rect x="25" y="25" width="150" height="45" rx="8">
+<animate attributeName="fill" values="#eef4fb;#eef7ee;#f7f0ee;#eef4fb" dur="3s" repeatCount="indefinite"/></rect>
+<circle cx="100" cy="47" r="9" fill="#2563eb"/>
+<text x="100" y="86" font-size="9" text-anchor="middle" fill="#888">🏞️ 배경만 바뀜</text>
+''')
+
+# J: 같은 점의 색만 순환
+ANIM["J"] = _svg('''
+<circle cx="100" cy="46" r="16">
+<animate attributeName="fill" values="#2563eb;#16a34a;#dc2626;#7c3aed;#2563eb" dur="2.4s" repeatCount="indefinite"/></circle>
+<text x="100" y="84" font-size="9" text-anchor="middle" fill="#888">🎨 색만 바뀜</text>
+''')
+
 # =====================================================================
 # 2. 시뮬레이션 엔진  (대립유전자 0=A, 1=a / 유전자형 = 두 값의 합)
 # =====================================================================
 def _init_pop(N, p, rng):
     return (rng.random((N, 2)) >= p).astype(np.int8)
-
 
 def _step(alleles, prm, rng):
     N = len(alleles)
@@ -101,7 +210,6 @@ def _step(alleles, prm, rng):
             new[mask] = mig
     return new
 
-
 @st.cache_data(show_spinner=False)
 def run_simulation(N, generations, p0, mating, mu, migration,
                    mig_A_freq, s_AA, s_Aa, s_aa, assort_strength, seed):
@@ -128,7 +236,6 @@ def run_simulation(N, generations, p0, mating, mu, migration,
         alleles = _step(alleles, prm, rng)
         record(alleles, gen)
     return pd.DataFrame(rows), geno_history
-
 
 # =====================================================================
 # 3. 기본값 + 되돌리기(리셋) 처리
@@ -166,6 +273,10 @@ if c_left.button("↩️ 처음 상태로", width='stretch',
 teacher = c_right.toggle("👩‍🏫 선생님", value=False,
                          help="켜면 조건 A~J의 진짜 의미가 보여요.")
 
+show_hint = st.sidebar.toggle(
+    "💡 조건 힌트 켜기", value=False,
+    help="켜면 각 조건 아래에 ‘무엇을 바꾸는지’ 살짝 힌트가 나와요. (정답 아님)")
+
 st.sidebar.number_input(
     "🎲 실험 번호", min_value=0, max_value=99999, step=1, key="kSeed",
     help="같은 번호로 돌리면 결과가 똑같이 나와요. 번호를 바꾸면 '우연'이 어떻게 작용하는지 볼 수 있어요.",
@@ -175,23 +286,41 @@ st.sidebar.markdown("---")
 st.sidebar.subheader("조건 A ~ J")
 st.sidebar.caption("💡 **한 번에 하나씩만** 바꿔 보고, 그래프가 변하는지 관찰하세요.")
 
-
 def label(letter):
     base = f"조건 {letter}"
     return f"{base}  ·  {CONDITIONS[letter]['real']}" if teacher else base
 
-
 st.sidebar.select_slider(label("A"), options=list(N_MAP.keys()), key="kA")
+if show_hint:
+    st.sidebar.caption(HINT["A"])
 st.sidebar.radio(label("B"), ["방식 1", "방식 2"], horizontal=True, key="kB")
+if show_hint:
+    st.sidebar.caption(HINT["B"])
 st.sidebar.select_slider(label("C"), options=list(MU_MAP.keys()), key="kC")
+if show_hint:
+    st.sidebar.caption(HINT["C"])
 st.sidebar.select_slider(label("D"), options=list(MIG_MAP.keys()), key="kD")
+if show_hint:
+    st.sidebar.caption(HINT["D"])
 st.sidebar.radio(label("E"), ["똑같음", "다름"], horizontal=True, key="kE")
+if show_hint:
+    st.sidebar.caption(HINT["E"])
 st.sidebar.markdown("· · ·")
 st.sidebar.slider(label("F"), 0.1, 0.9, step=0.1, key="kF")
+if show_hint:
+    st.sidebar.caption(HINT["F"])
 st.sidebar.slider(label("G"), 10, 200, step=5, key="kG")
+if show_hint:
+    st.sidebar.caption(HINT["G"])
 st.sidebar.select_slider(label("H"), options=["느림", "보통", "빠름"], key="kH")
+if show_hint:
+    st.sidebar.caption(HINT["H"])
 st.sidebar.selectbox(label("I"), ["흰색", "연회색", "연파랑", "연녹색"], key="kI")
+if show_hint:
+    st.sidebar.caption(HINT["I"])
 st.sidebar.radio(label("J"), ["방식 1", "방식 2"], horizontal=True, key="kJ")
+if show_hint:
+    st.sidebar.caption(HINT["J"])
 
 with st.sidebar.expander("⚙️ 고급 설정 (선생님용)"):
     st.slider("이주민의 A 유전자 비율", 0.0, 1.0, step=0.1, key="kMig",
@@ -238,8 +367,8 @@ JITTER = {"느림": 0.15, "보통": 0.30, "빠름": 0.50}[st.session_state["kH"]
 # =====================================================================
 st.title("🧬 개체군은 언제 진화하지 않을까?")
 
-tab1, tab2, tab3, tab4 = st.tabs(
-    ["① 시작하기", "② 실험하기", "③ 내 생각 정리", "④ 결과 확인"]
+tab1, tabH, tab2, tab3, tab4 = st.tabs(
+    ["① 시작하기", "💡 조건 힌트", "② 실험하기", "③ 내 생각 정리", "④ 결과 확인"]
 )
 
 # ---------------------------------------------------------------------
@@ -280,6 +409,27 @@ with tab1:
         "• 길을 잃으면 왼쪽 **‘↩️ 처음 상태로’** 버튼을 누르세요.\n\n"
         "• 같은 조건이라도 **실험 번호**를 바꿔 여러 번 돌려 보면 *우연의 힘*이 큰 조건을 찾을 수 있어요."
     )
+
+# ---------------------------------------------------------------------
+# 화면 H. 조건 힌트 (애니메이션 + 수수께끼)
+# ---------------------------------------------------------------------
+with tabH:
+    st.header("💡 조건이 ‘무엇을 바꾸는지’ 힌트")
+    st.markdown(
+        "각 조건이 **어떤 것을 건드리는지** 살짝 보여주는 힌트예요. "
+        "**정답(평형 조건인지 아닌지)** 은 직접 **‘② 실험하기’** 에서 확인하세요! 🔍"
+    )
+    letters = list(CONDITIONS.keys())
+    for i in range(0, len(letters), 2):
+        cols = st.columns(2)
+        for j, L in enumerate(letters[i:i + 2]):
+            with cols[j]:
+                title = f"조건 {L}"
+                if teacher:
+                    title += f"  ·  {CONDITIONS[L]['real']}"
+                st.markdown(f"**{title}**")
+                st.html(ANIM[L])
+                st.caption(HINT[L])
 
 # ---------------------------------------------------------------------
 # 화면 2. 실험하기
