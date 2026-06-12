@@ -22,65 +22,55 @@ st.set_page_config(
 )
 
 # =====================================================================
-# 1. 조건 A~J 메타데이터 (내부 정답)
+# 1. 조건 A~J 메타데이터 (내부 정답 — 학생에겐 숨김)
 # =====================================================================
-# is_eq=True 이면 하디-바인베르크 평형 조건, False 이면 함정(무관) 조건
 CONDITIONS = {
-    "A": {"real": "개체군 크기",        "is_eq": True,
-          "why": "집단이 작으면 우연(유전적 부동)으로 대립유전자 빈도가 크게 변할 수 있다."},
-    "B": {"real": "무작위 교배",        "is_eq": True,
-          "why": "교배가 무작위가 아니면 대립유전자 빈도는 거의 그대로여도 유전자형 빈도가 p²:2pq:q²에서 벗어난다."},
-    "C": {"real": "돌연변이 없음",      "is_eq": True,
-          "why": "돌연변이는 한 대립유전자를 다른 대립유전자로 바꾸어 빈도를 변화시킨다."},
-    "D": {"real": "이주(유전자 흐름) 없음", "is_eq": True,
-          "why": "외부 개체가 들어오면 다른 대립유전자 비율이 섞여 빈도가 변한다."},
-    "E": {"real": "자연선택 없음",      "is_eq": True,
-          "why": "유전자형마다 생존율이 다르면 특정 대립유전자가 늘거나 줄어든다."},
-    "F": {"real": "초기 A 대립유전자 비율", "is_eq": False,
-          "why": "시작값(p, q)과 p²:2pq:q² 값은 바뀌지만, 평형이 '유지되는지'와는 무관하다."},
-    "G": {"real": "관찰 세대 수",       "is_eq": False,
-          "why": "오래 관찰한다고 평형이 깨지거나 만들어지지 않는다. 관찰 기간일 뿐이다."},
-    "H": {"real": "개체 이동 속도",     "is_eq": False,
-          "why": "화면에서 점이 움직이는 속도일 뿐, 유전자 빈도에는 영향이 없다."},
-    "I": {"real": "배경 환경(서식지 색)", "is_eq": False,
-          "why": "생존율을 바꾸지 않는 단순 배경. 유전자 빈도와 무관하다."},
-    "J": {"real": "개체 색상 표시 방식", "is_eq": False,
-          "why": "AA·Aa·aa를 어떤 색으로 보여줄지일 뿐, 유전자 빈도와 무관하다."},
+    "A": {"real": "개체군 크기", "is_eq": True,
+          "why": "집단이 작으면 우연(유전적 부동)만으로도 유전자 비율이 크게 흔들릴 수 있어요."},
+    "B": {"real": "무작위 짝짓기", "is_eq": True,
+          "why": "짝짓기가 무작위가 아니면, 유전자 비율은 거의 그대로여도 유전자형 비율이 예상값에서 벗어나요."},
+    "C": {"real": "돌연변이 없음", "is_eq": True,
+          "why": "돌연변이는 한 유전자를 다른 유전자로 바꾸어 비율을 변하게 해요."},
+    "D": {"real": "이주(외부 유입) 없음", "is_eq": True,
+          "why": "바깥에서 개체가 들어오면 다른 유전자 비율이 섞여 비율이 변해요."},
+    "E": {"real": "자연선택 없음", "is_eq": True,
+          "why": "유형마다 생존율이 다르면 특정 유전자가 점점 늘거나 줄어들어요."},
+    "F": {"real": "처음 A 유전자 비율", "is_eq": False,
+          "why": "시작값과 예상값(p²·2pq·q²)은 달라지지만, 평형이 '유지되는지'와는 상관없어요."},
+    "G": {"real": "관찰 세대 수", "is_eq": False,
+          "why": "오래 본다고 평형이 깨지거나 만들어지지 않아요. 그냥 관찰 기간일 뿐."},
+    "H": {"real": "개체 움직이는 속도", "is_eq": False,
+          "why": "화면에서 점이 흔들리는 정도일 뿐, 유전자 비율과는 관계없어요."},
+    "I": {"real": "배경 색(서식지)", "is_eq": False,
+          "why": "생존율을 바꾸지 않는 단순 배경. 유전자 비율과 무관해요."},
+    "J": {"real": "개체 색칠 방식", "is_eq": False,
+          "why": "유형을 어떤 색으로 보여줄지일 뿐, 유전자 비율과 무관해요."},
 }
-EQUILIBRIUM_LETTERS = [k for k, v in CONDITIONS.items() if v["is_eq"]]      # A,B,C,D,E
-NEUTRAL_LETTERS     = [k for k, v in CONDITIONS.items() if not v["is_eq"]]  # F,G,H,I,J
+EQ_LETTERS = [k for k, v in CONDITIONS.items() if v["is_eq"]]       # A,B,C,D,E
+NEUTRAL_LETTERS = [k for k, v in CONDITIONS.items() if not v["is_eq"]]  # F,G,H,I,J
 
 # =====================================================================
-# 2. 시뮬레이션 엔진
-#    대립유전자 인코딩: 0 = A, 1 = a   /   유전자형 코드 = 두 대립유전자의 합
-#    (0=AA, 1=Aa, 2=aa)
+# 2. 시뮬레이션 엔진  (대립유전자 0=A, 1=a / 유전자형 = 두 값의 합)
 # =====================================================================
 def _init_pop(N, p, rng):
-    """초기 집단 생성: 각 대립유전자를 A(0)는 확률 p, a(1)는 확률 (1-p)로 뽑음."""
     return (rng.random((N, 2)) >= p).astype(np.int8)
 
 
 def _step(alleles, prm, rng):
-    """한 세대 진행: 선택 → 교배(+돌연변이) → 이주."""
     N = len(alleles)
     g = alleles.sum(axis=1)  # 0:AA, 1:Aa, 2:aa
-
-    # --- 자연선택: 유전자형별 생존율을 가중치로 사용 ---
     surv = np.array([prm["s_AA"], prm["s_Aa"], prm["s_aa"]], dtype=float)
     w = surv[g]
     if w.sum() <= 0:
         w = np.ones(N)
     prob = w / w.sum()
 
-    # --- 부모 1 선택 ---
     p1 = rng.choice(N, size=N, p=prob)
-
-    # --- 부모 2 선택: 무작위 교배 vs 동형접합 선호(비무작위) ---
     if prm["mating"] == "random":
         p2 = rng.choice(N, size=N, p=prob)
     else:
-        strength = prm.get("assort_strength", 0.85)  # 같은 유전자형끼리 교배할 확률
-        p2 = rng.choice(N, size=N, p=prob)           # 기본은 무작위 짝
+        strength = prm.get("assort_strength", 0.85)
+        p2 = rng.choice(N, size=N, p=prob)
         assort_mask = rng.random(N) < strength
         gp1 = g[p1]
         for gt in (0, 1, 2):
@@ -92,18 +82,15 @@ def _step(alleles, prm, rng):
             wp = wp / wp.sum()
             p2[idx] = rng.choice(pool, size=len(idx), p=wp)
 
-    # --- 각 부모가 대립유전자 하나씩 전달 ---
     a1 = alleles[p1, rng.integers(0, 2, size=N)]
     a2 = alleles[p2, rng.integers(0, 2, size=N)]
     new = np.stack([a1, a2], axis=1).astype(np.int8)
 
-    # --- 돌연변이: 전달된 각 대립유전자가 확률 mu로 뒤집힘(A↔a) ---
     mu = prm["mu"]
     if mu > 0:
         flip = rng.random((N, 2)) < mu
         new = np.where(flip, 1 - new, new).astype(np.int8)
 
-    # --- 이주: 일부 개체를 외부 유입 개체로 교체 ---
     m = prm["migration"]
     if m > 0:
         mask = rng.random(N) < m
@@ -118,12 +105,10 @@ def _step(alleles, prm, rng):
 @st.cache_data(show_spinner=False)
 def run_simulation(N, generations, p0, mating, mu, migration,
                    mig_A_freq, s_AA, s_Aa, s_aa, assort_strength, seed):
-    """전체 세대를 시뮬레이션하고 (DataFrame, 유전자형 이력)을 반환."""
     rng = np.random.default_rng(seed)
     prm = dict(N=N, p0=p0, mating=mating, mu=mu, migration=migration,
                mig_A_freq=mig_A_freq, s_AA=s_AA, s_Aa=s_Aa, s_aa=s_aa,
                assort_strength=assort_strength)
-
     alleles = _init_pop(N, p0, rng)
     rows = []
     geno_history = np.empty((generations + 1, N), dtype=np.int8)
@@ -133,319 +118,318 @@ def run_simulation(N, generations, p0, mating, mu, migration,
         nAA = int((g == 0).sum()); nAa = int((g == 1).sum()); naa = int((g == 2).sum())
         p = (2 * nAA + nAa) / (2 * N)
         q = 1.0 - p
-        rows.append(dict(
-            세대=gen, p=p, q=q,
-            관찰_AA=nAA / N, 관찰_Aa=nAa / N, 관찰_aa=naa / N,
-            예상_AA=p * p, 예상_Aa=2 * p * q, 예상_aa=q * q,
-        ))
+        rows.append(dict(세대=gen, p=p, q=q,
+                         관찰_AA=nAA / N, 관찰_Aa=nAa / N, 관찰_aa=naa / N,
+                         예상_AA=p * p, 예상_Aa=2 * p * q, 예상_aa=q * q))
         geno_history[gen] = g
 
     record(alleles, 0)
     for gen in range(1, generations + 1):
         alleles = _step(alleles, prm, rng)
         record(alleles, gen)
-
     return pd.DataFrame(rows), geno_history
 
 
 # =====================================================================
-# 3. 사이드바: 교사 모드 + 조건 A~J 조작
+# 3. 기본값 + 되돌리기(리셋) 처리
 # =====================================================================
-# 내부 매핑(학생에게는 숨김)
-N_MAP   = {"수준 ①": 20, "수준 ②": 100, "수준 ③": 500, "수준 ④": 1000}
-MU_MAP  = {"0%": 0.0, "1%": 0.01, "5%": 0.05}
+DEFAULTS = {
+    "kSeed": 42, "kA": "보통 (③)", "kB": "방식 1", "kC": "0%", "kD": "없음",
+    "kE": "똑같음", "kF": 0.5, "kG": 30, "kH": "보통", "kI": "흰색",
+    "kJ": "방식 1", "kMig": 0.9,
+}
+# 첫 실행 시 기본값 세팅
+for _k, _v in DEFAULTS.items():
+    st.session_state.setdefault(_k, _v)
+# 되돌리기 플래그 처리
+if st.session_state.get("_reset"):
+    for _k, _v in DEFAULTS.items():
+        st.session_state[_k] = _v
+    st.session_state["_reset"] = False
+
+# 내부 매핑
+N_MAP = {"아주 작음 (①)": 20, "작음 (②)": 100, "보통 (③)": 500, "큼 (④)": 1000}
+MU_MAP = {"0%": 0.0, "1%": 0.01, "5%": 0.05}
 MIG_MAP = {"없음": 0.0, "적음": 0.05, "많음": 0.20}
 
-st.sidebar.title("🧪 실험실 조작판")
-teacher = st.sidebar.toggle("👩‍🏫 교사용 모드 (조건의 진짜 의미 보기)", value=False)
-seed = st.sidebar.number_input("🎲 난수 seed (같은 값=같은 결과)",
-                               min_value=0, max_value=99999, value=42, step=1)
+# =====================================================================
+# 4. 사이드바 : 조작 패널
+# =====================================================================
+st.sidebar.title("🎛️ 조작 패널")
+st.sidebar.caption("값을 바꾸면 결과가 **바로** 바뀌어요.")
+
+c_left, c_right = st.sidebar.columns([1, 1])
+if c_left.button("↩️ 처음 상태로", width='stretch',
+                 help="모든 조건을 기본값으로 되돌려요."):
+    st.session_state["_reset"] = True
+    st.rerun()
+teacher = c_right.toggle("👩‍🏫 선생님", value=False,
+                         help="켜면 조건 A~J의 진짜 의미가 보여요.")
+
+st.sidebar.number_input(
+    "🎲 실험 번호", min_value=0, max_value=99999, step=1, key="kSeed",
+    help="같은 번호로 돌리면 결과가 똑같이 나와요. 번호를 바꾸면 '우연'이 어떻게 작용하는지 볼 수 있어요.",
+)
 
 st.sidebar.markdown("---")
 st.sidebar.subheader("조건 A ~ J")
+st.sidebar.caption("💡 **한 번에 하나씩만** 바꿔 보고, 그래프가 변하는지 관찰하세요.")
 
 
 def label(letter):
-    """교사 모드면 조건의 진짜 의미를 함께 표시."""
     base = f"조건 {letter}"
-    if teacher:
-        return f"{base}  ·  {CONDITIONS[letter]['real']}"
-    return base
+    return f"{base}  ·  {CONDITIONS[letter]['real']}" if teacher else base
 
 
-# --- 조건 A: 개체군 크기 (평형 O) ---
-cA = st.sidebar.select_slider(label("A"), options=list(N_MAP.keys()), value="수준 ③")
-# --- 조건 B: 무작위 교배 (평형 O) ---
-cB = st.sidebar.radio(label("B"), ["방식 1", "방식 2"], horizontal=True, index=0,
-                      help="짝을 어떻게 짓는지에 대한 두 가지 방식")
-# --- 조건 C: 돌연변이 (평형 O) ---
-cC = st.sidebar.select_slider(label("C"), options=list(MU_MAP.keys()), value="0%")
-# --- 조건 D: 이주 (평형 O) ---
-cD = st.sidebar.select_slider(label("D"), options=list(MIG_MAP.keys()), value="없음")
-# --- 조건 E: 자연선택 (평형 O) ---
-cE = st.sidebar.radio(label("E"), ["동일", "차이 있음"], horizontal=True, index=0,
-                      help="세 유형의 생존율을 같게 / 다르게")
-
+st.sidebar.select_slider(label("A"), options=list(N_MAP.keys()), key="kA")
+st.sidebar.radio(label("B"), ["방식 1", "방식 2"], horizontal=True, key="kB")
+st.sidebar.select_slider(label("C"), options=list(MU_MAP.keys()), key="kC")
+st.sidebar.select_slider(label("D"), options=list(MIG_MAP.keys()), key="kD")
+st.sidebar.radio(label("E"), ["똑같음", "다름"], horizontal=True, key="kE")
 st.sidebar.markdown("· · ·")
+st.sidebar.slider(label("F"), 0.1, 0.9, step=0.1, key="kF")
+st.sidebar.slider(label("G"), 10, 200, step=5, key="kG")
+st.sidebar.select_slider(label("H"), options=["느림", "보통", "빠름"], key="kH")
+st.sidebar.selectbox(label("I"), ["흰색", "연회색", "연파랑", "연녹색"], key="kI")
+st.sidebar.radio(label("J"), ["방식 1", "방식 2"], horizontal=True, key="kJ")
 
-# --- 조건 F: 초기 A 비율 (함정 X) ---
-cF = st.sidebar.slider(label("F"), 0.1, 0.9, 0.5, 0.1)
-# --- 조건 G: 관찰 세대 수 (함정 X) ---
-cG = st.sidebar.slider(label("G"), 10, 200, 30, 5)
-# --- 조건 H: 개체 이동 속도 (함정 X, 시각 전용) ---
-cH = st.sidebar.select_slider(label("H"), options=["느림", "중간", "빠름"], value="중간")
-# --- 조건 I: 배경 환경 (함정 X, 시각 전용) ---
-cI = st.sidebar.selectbox(label("I"), ["흰색", "연회색", "연파랑", "연녹색"])
-# --- 조건 J: 색상 표시 방식 (함정 X, 시각 전용) ---
-cJ = st.sidebar.radio(label("J"), ["방식 1", "방식 2"], horizontal=True, index=0)
+with st.sidebar.expander("⚙️ 고급 설정 (선생님용)"):
+    st.slider("이주민의 A 유전자 비율", 0.0, 1.0, step=0.1, key="kMig",
+              help="조건 D(이주)가 '적음/많음'일 때 들어오는 외부 개체의 A 비율")
 
-# 고급(교사용) 설정 — 이주민 A 비율
-with st.sidebar.expander("⚙️ 고급 설정 (교사용)"):
-    mig_A_freq = st.slider("이주민의 A 대립유전자 비율", 0.0, 1.0, 0.9, 0.1,
-                           help="조건 D(이주)가 '적음/많음'일 때 들어오는 외부 개체의 A 비율")
+with st.sidebar.expander("❓ 사용법 도움말"):
+    st.markdown(
+        "- 왼쪽 조건을 바꾸면 오른쪽 그래프가 바로 바뀌어요.\n"
+        "- **‘② 실험하기’** 탭에서 세대별 변화를 관찰하세요.\n"
+        "- 헷갈리면 **‘↩️ 처음 상태로’** 를 눌러 다시 시작하세요.\n"
+        "- 같은 조건이라도 **실험 번호**를 바꿔 여러 번 돌려 보세요."
+    )
 
-# --- 조작값 → 시뮬레이션 파라미터로 변환 ---
-N           = N_MAP[cA]
-mating      = "random" if cB == "방식 1" else "assort"
-mu          = MU_MAP[cC]
-migration   = MIG_MAP[cD]
-p0          = cF
-generations = cG
-if cE == "동일":
+# --- 조작값 → 파라미터 ---
+N = N_MAP[st.session_state["kA"]]
+mating = "random" if st.session_state["kB"] == "방식 1" else "assort"
+mu = MU_MAP[st.session_state["kC"]]
+migration = MIG_MAP[st.session_state["kD"]]
+p0 = st.session_state["kF"]
+generations = st.session_state["kG"]
+if st.session_state["kE"] == "똑같음":
     s_AA, s_Aa, s_aa = 1.0, 1.0, 1.0
 else:
-    s_AA, s_Aa, s_aa = 1.0, 1.0, 0.7   # aa의 생존율이 낮음(약한 방향성 선택)
-assort_strength = 0.85
+    s_AA, s_Aa, s_aa = 1.0, 1.0, 0.7
+mig_A_freq = st.session_state["kMig"]
+seed = int(st.session_state["kSeed"])
 
-# --- 시뮬레이션 실행 (캐시됨) ---
 df, geno_history = run_simulation(
     N, generations, p0, mating, mu, migration,
-    mig_A_freq, s_AA, s_Aa, s_aa, assort_strength, int(seed),
+    mig_A_freq, s_AA, s_Aa, s_aa, 0.85, seed,
 )
 
-# 시각 전용 설정값
+# 시각 전용 설정
 BG_MAP = {"흰색": "white", "연회색": "#f2f2f2", "연파랑": "#eef4fb", "연녹색": "#eef7ee"}
-plot_bg = BG_MAP[cI]
-if cJ == "방식 1":
-    COLOR = {"AA": "#2563eb", "Aa": "#16a34a", "aa": "#dc2626"}  # 파/초/빨
+plot_bg = BG_MAP[st.session_state["kI"]]
+if st.session_state["kJ"] == "방식 1":
+    COLOR = {"AA": "#2563eb", "Aa": "#16a34a", "aa": "#dc2626"}
 else:
-    COLOR = {"AA": "#7c3aed", "Aa": "#f59e0b", "aa": "#0891b2"}  # 보라/주황/청록
-JITTER = {"느림": 0.15, "중간": 0.30, "빠름": 0.50}[cH]
+    COLOR = {"AA": "#7c3aed", "Aa": "#f59e0b", "aa": "#0891b2"}
+JITTER = {"느림": 0.15, "보통": 0.30, "빠름": 0.50}[st.session_state["kH"]]
 
 # =====================================================================
-# 4. 본문: 4개 화면(탭)
+# 5. 본문 : 탭 4개
 # =====================================================================
 st.title("🧬 개체군은 언제 진화하지 않을까?")
 
 tab1, tab2, tab3, tab4 = st.tabs(
-    ["① 탐구 안내", "② 시뮬레이션", "③ 나의 판단", "④ 정답 공개·피드백"]
+    ["① 시작하기", "② 실험하기", "③ 내 생각 정리", "④ 결과 확인"]
 )
 
 # ---------------------------------------------------------------------
-# 화면 1. 탐구 안내
+# 화면 1. 시작하기
 # ---------------------------------------------------------------------
 with tab1:
-    st.header("이 활동에서 할 일")
+    st.header("무엇을 하는 활동일까요?")
     st.markdown(
         """
-        진화는 **대립유전자 빈도(p, q)의 변화**로 설명할 수 있습니다.
-        그렇다면 거꾸로, **개체군이 진화하지 않으려면(=빈도가 변하지 않으려면)**
-        어떤 조건이 필요할까요?
-
-        왼쪽 조작판에는 **조건 A부터 J까지 10가지**가 있습니다.
-        아직 각 조건이 무엇인지는 알려주지 않습니다.
-
-        1. 조건을 **하나씩** 바꿔 보며 **②시뮬레이션** 탭에서 세대별 변화를 관찰하세요.
-        2. **대립유전자 빈도(A, a)** 와 **유전자형 빈도(AA, Aa, aa)** 가
-           세대가 지나도 **안정적으로 유지되는지** 살펴보세요.
-        3. 활동 끝에 **③나의 판단** 탭에서 *평형 유지에 꼭 필요한 조건 5가지*를 고릅니다.
-        4. 다 고르면 **④정답 공개** 탭에서 진짜 의미와 피드백을 확인합니다.
+        생물의 **진화**는 한마디로 **유전자 비율이 바뀌는 것**이에요.
+        그렇다면 거꾸로, **개체군이 진화하지 *않으려면*(=유전자 비율이 안 바뀌려면)**
+        어떤 조건이 필요할까요? 그걸 **직접 실험해서 찾아내는** 활동입니다.
+        """
+    )
+    st.markdown("#### 이렇게 해보세요 🔍")
+    st.markdown(
+        """
+        1. 왼쪽 **조작 패널**에 조건 **A~J**가 있어요. (아직 무엇인지는 비밀!)
+        2. **‘② 실험하기’** 탭에서 조건을 **하나씩** 바꿔 보며 변화를 관찰해요.
+        3. **‘③ 내 생각 정리’** 탭에서 *평형에 꼭 필요한 조건 5개*를 골라요.
+        4. **‘④ 결과 확인’** 탭에서 진짜 정답과 설명을 확인해요!
         """
     )
     c1, c2 = st.columns(2)
     with c1:
         st.info(
-            "**관찰 포인트 1 — 대립유전자 빈도**\n\n"
-            "A와 a의 비율(p, q)이 세대가 지나도 그대로인가요, 변하나요?"
+            "**관찰 포인트 1 · 유전자 비율**\n\n"
+            "A와 a의 비율이 세대가 지나도 **그대로**인가요, 아니면 **변하나요**?"
         )
     with c2:
         st.info(
-            "**관찰 포인트 2 — 유전자형 빈도**\n\n"
-            "AA : Aa : aa 비율이 하디-바인베르크 예상값 **p² : 2pq : q²** 와 일치하나요?"
+            "**관찰 포인트 2 · 유전자형 비율**\n\n"
+            "AA : Aa : aa 비율이 **예상값(p² : 2pq : q²)** 과 **일치**하나요?"
         )
-    st.warning(
-        "💡 **실험 팁**: 한 번에 **한 조건만** 바꾸고 나머지는 기본값으로 두세요. "
-        "그래야 그 조건이 빈도 변화의 원인인지 알 수 있습니다. "
-        "또, 같은 조건이라도 **seed**(왼쪽 위)를 바꿔 여러 번 돌려 보면 "
-        "*우연의 효과*가 큰 조건과 작은 조건을 구별할 수 있어요."
+    st.success(
+        "💡 **실험 비법**\n\n"
+        "• 한 번에 **하나의 조건만** 바꾸세요. 그래야 원인을 알 수 있어요.\n\n"
+        "• 길을 잃으면 왼쪽 **‘↩️ 처음 상태로’** 버튼을 누르세요.\n\n"
+        "• 같은 조건이라도 **실험 번호**를 바꿔 여러 번 돌려 보면 *우연의 힘*이 큰 조건을 찾을 수 있어요."
     )
 
 # ---------------------------------------------------------------------
-# 화면 2. 시뮬레이션
+# 화면 2. 실험하기
 # ---------------------------------------------------------------------
 with tab2:
-    last = df.iloc[-1]
+    first, last = df.iloc[0], df.iloc[-1]
     m1, m2, m3, m4 = st.columns(4)
-    m1.metric("집단 크기", f"{N:,} 개체")
-    m2.metric("관찰 세대", f"{generations} 세대")
-    m3.metric("A 빈도 p (처음→끝)", f"{df.iloc[0]['p']:.2f} → {last['p']:.2f}",
-              delta=f"{last['p'] - df.iloc[0]['p']:+.2f}")
-    m4.metric("a 빈도 q (처음→끝)", f"{df.iloc[0]['q']:.2f} → {last['q']:.2f}",
-              delta=f"{last['q'] - df.iloc[0]['q']:+.2f}")
+    m1.metric("전체 개체 수", f"{N:,} 마리")
+    m2.metric("관찰한 세대", f"{generations} 세대")
+    m3.metric("A 유전자 비율 (시작 → 지금)", f"{first['p']:.2f} → {last['p']:.2f}",
+              delta=f"{last['p'] - first['p']:+.2f}")
+    m4.metric("a 유전자 비율 (시작 → 지금)", f"{first['q']:.2f} → {last['q']:.2f}",
+              delta=f"{last['q'] - first['q']:+.2f}")
+    st.caption("위 숫자의 변화량(▲▼)이 0에 가까울수록 '진화가 일어나지 않은' 거예요.")
 
-    st.markdown("### 🐢 개체군 모습")
-    show_gen = st.slider("표시할 세대", 0, generations, generations, key="popgen")
+    st.markdown("### 🐢 개체군 들여다보기")
+    show_gen = st.slider("몇 세대째를 볼까요?", 0, generations, generations, key="popgen")
 
     left, right = st.columns([1, 1.3])
-
-    # --- (좌) 개체군 산점도 ---
     with left:
         g_disp = geno_history[show_gen]
-        rng_pos = np.random.default_rng(1000 + show_gen)  # 세대별 고정 위치
+        rng_pos = np.random.default_rng(1000 + show_gen)
         n_disp = len(g_disp)
         side = int(np.ceil(np.sqrt(n_disp)))
         gx, gy = np.meshgrid(np.arange(side), np.arange(side))
         gx = gx.flatten()[:n_disp].astype(float)
         gy = gy.flatten()[:n_disp].astype(float)
-        gx += rng_pos.uniform(-JITTER, JITTER, n_disp)  # 이동 속도(H) = 흔들림(시각 전용)
+        gx += rng_pos.uniform(-JITTER, JITTER, n_disp)
         gy += rng_pos.uniform(-JITTER, JITTER, n_disp)
-
         names = np.array(["AA", "Aa", "aa"])[g_disp]
         fig_pop = go.Figure()
         for gt in ["AA", "Aa", "aa"]:
             sel = names == gt
             fig_pop.add_trace(go.Scatter(
                 x=gx[sel], y=gy[sel], mode="markers", name=gt,
-                marker=dict(size=max(4, 220 / side), color=COLOR[gt],
-                            line=dict(width=0)),
-            ))
+                marker=dict(size=max(4, 220 / side), color=COLOR[gt], line=dict(width=0))))
         fig_pop.update_layout(
             height=380, plot_bgcolor=plot_bg, paper_bgcolor=plot_bg,
             margin=dict(l=10, r=10, t=30, b=10),
             xaxis=dict(visible=False), yaxis=dict(visible=False, scaleanchor="x"),
             legend=dict(orientation="h", y=1.08),
-            title=f"{show_gen}세대 ({n_disp:,}개체)",
-        )
+            title=f"{show_gen}세대 ({n_disp:,}마리)")
         st.plotly_chart(fig_pop, width='stretch')
+        st.caption("점 하나가 개체 한 마리예요. AA · Aa · aa는 한 유전자의 세 가지 유형이에요.")
 
-    # --- (우) 현재 세대 표: 관찰 vs 예상 ---
     with right:
         row = df.iloc[show_gen]
-        st.markdown(f"#### 📋 {show_gen}세대 빈도표")
+        st.markdown(f"#### 📋 {show_gen}세대 비율표")
         tbl = pd.DataFrame({
             "유전자형": ["AA", "Aa", "aa"],
-            "관찰 빈도": [row["관찰_AA"], row["관찰_Aa"], row["관찰_aa"]],
-            "예상 빈도 (p²,2pq,q²)": [row["예상_AA"], row["예상_Aa"], row["예상_aa"]],
+            "실제 관찰한 비율": [row["관찰_AA"], row["관찰_Aa"], row["관찰_aa"]],
+            "이론이 예상한 비율": [row["예상_AA"], row["예상_Aa"], row["예상_aa"]],
         })
-        tbl["관찰 − 예상"] = tbl["관찰 빈도"] - tbl["예상 빈도 (p²,2pq,q²)"]
+        tbl["차이 (관찰−예상)"] = tbl["실제 관찰한 비율"] - tbl["이론이 예상한 비율"]
         st.dataframe(
             tbl.style.format({
-                "관찰 빈도": "{:.3f}", "예상 빈도 (p²,2pq,q²)": "{:.3f}",
-                "관찰 − 예상": "{:+.3f}",
-            }),
-            hide_index=True, width='stretch',
-        )
+                "실제 관찰한 비율": "{:.3f}", "이론이 예상한 비율": "{:.3f}",
+                "차이 (관찰−예상)": "{:+.3f}"}),
+            hide_index=True, width='stretch')
         st.caption(
-            f"이 세대의 p = {row['p']:.3f}, q = {row['q']:.3f}  ·  "
-            "관찰값과 예상값이 크게 다르면 **무작위 교배가 아닐 가능성**이 큽니다."
+            f"이 세대의 A 비율 p = {row['p']:.3f}, a 비율 q = {row['q']:.3f}\n\n"
+            "👀 **차이가 큰지 작은지** 잘 살펴보세요. 어떤 조건에서 차이가 커지나요?"
         )
 
     st.markdown("### 📈 세대별 변화 그래프")
     gcol1, gcol2 = st.columns(2)
-
-    # --- 대립유전자 빈도 그래프 ---
     with gcol1:
         fig_a = go.Figure()
-        fig_a.add_trace(go.Scatter(x=df["세대"], y=df["p"], name="A (p)",
+        fig_a.add_trace(go.Scatter(x=df["세대"], y=df["p"], name="A 유전자 (p)",
                                    line=dict(color="#1d4ed8", width=3)))
-        fig_a.add_trace(go.Scatter(x=df["세대"], y=df["q"], name="a (q)",
+        fig_a.add_trace(go.Scatter(x=df["세대"], y=df["q"], name="a 유전자 (q)",
                                    line=dict(color="#b91c1c", width=3)))
         fig_a.update_layout(
-            title="대립유전자 빈도", height=340, plot_bgcolor=plot_bg,
-            paper_bgcolor=plot_bg, yaxis=dict(range=[0, 1], title="빈도"),
+            title="① 유전자 비율 변화", height=340, plot_bgcolor=plot_bg,
+            paper_bgcolor=plot_bg, yaxis=dict(range=[0, 1], title="비율"),
             xaxis=dict(title="세대"), legend=dict(orientation="h", y=1.12),
-            margin=dict(l=10, r=10, t=40, b=10),
-        )
+            margin=dict(l=10, r=10, t=40, b=10))
         st.plotly_chart(fig_a, width='stretch')
-
-    # --- 유전자형 빈도 그래프 (관찰 실선 + 예상 점선) ---
+        st.caption("선이 평평하면 → 유전자 비율이 안 변하는(=진화가 없는) 거예요.")
     with gcol2:
         fig_g = go.Figure()
         for gt, col in [("AA", "관찰_AA"), ("Aa", "관찰_Aa"), ("aa", "관찰_aa")]:
-            fig_g.add_trace(go.Scatter(
-                x=df["세대"], y=df[col], name=f"{gt} 관찰",
-                line=dict(color=COLOR[gt], width=3)))
+            fig_g.add_trace(go.Scatter(x=df["세대"], y=df[col], name=f"{gt} 관찰",
+                                       line=dict(color=COLOR[gt], width=3)))
         for gt, col in [("AA", "예상_AA"), ("Aa", "예상_Aa"), ("aa", "예상_aa")]:
-            fig_g.add_trace(go.Scatter(
-                x=df["세대"], y=df[col], name=f"{gt} 예상",
-                line=dict(color=COLOR[gt], width=1.5, dash="dot"),
-                opacity=0.6))
+            fig_g.add_trace(go.Scatter(x=df["세대"], y=df[col], name=f"{gt} 예상",
+                                       line=dict(color=COLOR[gt], width=1.5, dash="dot"),
+                                       opacity=0.6))
         fig_g.update_layout(
-            title="유전자형 빈도 (실선=관찰, 점선=예상 p²·2pq·q²)",
-            height=340, plot_bgcolor=plot_bg, paper_bgcolor=plot_bg,
-            yaxis=dict(range=[0, 1], title="빈도"), xaxis=dict(title="세대"),
+            title="② 유전자형 비율 (실선=관찰, 점선=예상)", height=340,
+            plot_bgcolor=plot_bg, paper_bgcolor=plot_bg,
+            yaxis=dict(range=[0, 1], title="비율"), xaxis=dict(title="세대"),
             legend=dict(orientation="h", y=1.18, font=dict(size=10)),
-            margin=dict(l=10, r=10, t=40, b=10),
-        )
+            margin=dict(l=10, r=10, t=40, b=10))
         st.plotly_chart(fig_g, width='stretch')
+        st.caption("실선과 점선이 겹치면 → 예상대로(p²·2pq·q²) 잘 맞는 거예요.")
 
-    with st.expander("📊 세대별 원자료(표) 보기 / 내려받기"):
+    with st.expander("📊 표로 된 자료 보기 / 내려받기"):
         show_df = df.copy()
         for c in show_df.columns[1:]:
             show_df[c] = show_df[c].round(4)
         st.dataframe(show_df, hide_index=True, width='stretch')
-        st.download_button("CSV 내려받기", show_df.to_csv(index=False).encode("utf-8-sig"),
+        st.download_button("CSV로 내려받기",
+                           show_df.to_csv(index=False).encode("utf-8-sig"),
                            file_name="simulation_data.csv", mime="text/csv")
 
 # ---------------------------------------------------------------------
-# 화면 3. 나의 판단
+# 화면 3. 내 생각 정리
 # ---------------------------------------------------------------------
 with tab3:
-    st.header("내가 찾은 평형 조건")
+    st.header("내가 찾은 평형 조건 ✍️")
     st.markdown(
-        "여러 조건을 충분히 실험해 봤다면, 아래에 결론을 정리하세요. "
-        "**평형 유지에 꼭 필요한 조건 5개**와 **관련 없다고 생각하는 조건 5개**를 고릅니다."
+        "충분히 실험해 봤다면, 아래에서 **평형에 꼭 필요할 것 같은 조건 5개**에 체크하세요. "
+        "체크하지 않은 것은 '관련 없음'으로 봅니다."
     )
+    letters = list(CONDITIONS.keys())
+    cols = st.columns(2)
+    for i, L in enumerate(letters):
+        cols[i % 2].checkbox(f"조건 {L} — 평형에 필요할 것 같다", key=f"pick_{L}")
+    picks = [L for L in letters if st.session_state.get(f"pick_{L}")]
 
-    all_letters = list(CONDITIONS.keys())
-    picks = st.multiselect(
-        "✅ 평형 유지에 **필요하다**고 생각하는 조건 (정확히 5개)",
-        options=all_letters,
-        default=st.session_state.get("picks", []),
-        key="picks",
-    )
-    chosen = set(picks)
-    not_needed = [x for x in all_letters if x not in chosen]
-    st.caption(f"선택: {len(picks)}개  ·  자동으로 '관련 없음'으로 분류됨: "
-               f"{', '.join(not_needed) if not_needed else '—'}")
-
-    st.markdown("#### 관찰 기록 (탐구 질문)")
-    q1 = st.text_area("1) 조건을 바꾸었을 때 **대립유전자 빈도(p, q)** 가 변한 조건은? 어떻게 변했나요?",
-                      key="q1", height=80)
-    q2 = st.text_area("2) 조건을 바꾸었을 때 **유전자형 빈도(AA·Aa·aa)** 가 예상값에서 벗어난 조건은?",
-                      key="q2", height=80)
-    q3 = st.text_area("3) 그 변화가 **여러 세대에 걸쳐 유지**되었나요? (한 번 출렁였다 돌아오는지 vs 계속 변하는지)",
-                      key="q3", height=80)
-    q4 = st.text_area("4) 내가 고른 5개를 **평형 조건이라고 판단한 근거**(그래프 관찰)는 무엇인가요?",
-                      key="q4", height=100)
-
-    if len(picks) != 5:
-        st.error(f"평형 조건은 **정확히 5개**를 골라야 합니다. (현재 {len(picks)}개)")
+    n = len(picks)
+    if n == 5:
+        st.success("좋아요! 5개를 골랐어요. **‘④ 결과 확인’** 탭에서 정답을 확인하세요. 🎉")
+    elif n < 5:
+        st.info(f"지금까지 {n}개 선택 — {5 - n}개 더 고르면 돼요.")
     else:
-        st.success("5개 선택 완료! **④정답 공개** 탭에서 결과를 확인하세요.")
+        st.warning(f"지금 {n}개 선택했어요. 5개만 남기고 줄여 보세요.")
+
+    st.markdown("#### 관찰한 내용 적어보기 (탐구 질문)")
+    st.text_area("1) 조건을 바꿨을 때 **유전자 비율(p, q)** 이 변한 조건은? 어떻게 변했나요?",
+                 key="q1", height=80)
+    st.text_area("2) 유전자 비율은 거의 그대로인데 **유전자형 비율(AA·Aa·aa)** 이 "
+                 "예상값에서 벗어난 조건은?", key="q2", height=80)
+    st.text_area("3) 그 변화가 **여러 세대 동안 계속** 이어졌나요? "
+                 "(잠깐 출렁였다 돌아오는지 vs 계속 변하는지)", key="q3", height=80)
+    st.text_area("4) 내가 고른 5개를 평형 조건이라고 생각한 **근거**(관찰한 그래프)는?",
+                 key="q4", height=100)
 
 # ---------------------------------------------------------------------
-# 화면 4. 정답 공개·피드백
+# 화면 4. 결과 확인
 # ---------------------------------------------------------------------
 with tab4:
-    st.header("정답 공개 및 피드백")
-
-    picks = st.session_state.get("picks", [])
-    reveal = teacher or st.button("🔓 정답 공개하기", type="primary")
+    st.header("결과 확인 & 설명")
+    picks = [L for L in CONDITIONS if st.session_state.get(f"pick_{L}")]
+    reveal = teacher or st.button("🔓 정답 확인하기", type="primary")
 
     if not reveal:
-        st.info("**③나의 판단**에서 5개를 고른 뒤, 위 버튼을 누르거나 "
-                "교사용 모드를 켜면 정답이 공개됩니다.")
+        st.info("**‘③ 내 생각 정리’** 에서 5개를 고른 뒤, 위 **‘🔓 정답 확인하기’** "
+                "버튼을 누르면 정답이 나와요.")
     else:
         chosen = set(picks)
         rows = []
@@ -453,51 +437,47 @@ with tab4:
             picked = L in chosen
             correct = (picked == info["is_eq"])
             rows.append({
-                "조건": L,
-                "실제 의미": info["real"],
-                "평형 조건?": "O" if info["is_eq"] else "X",
+                "조건": L, "진짜 의미": info["real"],
+                "평형 조건?": "⭕" if info["is_eq"] else "❌",
                 "내 선택": "필요" if picked else "관련 없음",
-                "채점": "✅" if correct else "❌",
+                "채점": "정답 ✅" if correct else "다시 보기 🔁",
             })
-        result = pd.DataFrame(rows)
-        st.dataframe(result, hide_index=True, width='stretch')
+        st.dataframe(pd.DataFrame(rows), hide_index=True, width='stretch')
 
         if picks:
-            n_correct = int((result["채점"] == "✅").sum())
-            st.metric("정답 수", f"{n_correct} / 10")
-            hit = sorted(chosen & set(EQUILIBRIUM_LETTERS))
-            miss = sorted(set(EQUILIBRIUM_LETTERS) - chosen)
+            n_correct = sum(1 for r in rows if "정답" in r["채점"])
+            st.metric("맞힌 개수", f"{n_correct} / 10")
+            hit = sorted(chosen & set(EQ_LETTERS))
+            miss = sorted(set(EQ_LETTERS) - chosen)
             trap = sorted(chosen & set(NEUTRAL_LETTERS))
             if hit:
-                st.success("바르게 찾은 평형 조건: " +
+                st.success("잘 찾았어요 👍 : " +
                            ", ".join(f"{L}({CONDITIONS[L]['real']})" for L in hit))
             if miss:
-                st.warning("놓친 평형 조건: " +
+                st.warning("놓친 평형 조건 : " +
                            ", ".join(f"{L}({CONDITIONS[L]['real']})" for L in miss))
             if trap:
-                st.error("함정에 걸린 조건(평형 조건 아님): " +
+                st.error("함정에 걸렸어요 (평형 조건이 아니에요) : " +
                          ", ".join(f"{L}({CONDITIONS[L]['real']})" for L in trap))
 
-        st.markdown("### 🔑 하디-바인베르크 평형 5조건")
-        for L in EQUILIBRIUM_LETTERS:
+        st.markdown("### 🔑 평형을 유지하는 5가지 조건")
+        for L in EQ_LETTERS:
             st.markdown(f"- **{L} · {CONDITIONS[L]['real']}** — {CONDITIONS[L]['why']}")
 
-        st.markdown("### ⚠️ 자주 하는 오개념 바로잡기")
+        st.markdown("### ⚠️ 헷갈리기 쉬운 점 정리")
         st.markdown(
-            f"""
-- **초기 A 비율(F)** 은 시작값과 p²·2pq·q² *값*을 바꾸지만, 평형이 **유지되는지**와는 무관합니다.
-  → 평형 조건을 다 만족하면 p가 0.2든 0.8든 그 값에서 그대로 유지됩니다.
-- **개체군이 작으면(A)** 자연선택이 없어도 **우연(유전적 부동)** 만으로 빈도가 출렁이고,
-  심하면 한 대립유전자가 사라질 수 있습니다. seed를 바꿔 가며 확인해 보세요.
-- **자연선택(E)** 은 유전자형의 *생존율 차이*를 통해 특정 대립유전자를 늘리거나 줄입니다.
-- **돌연변이(C)·이주(D)** 는 대립유전자를 바꾸거나 외부에서 들여와 빈도를 변화시킵니다.
-- **무작위 교배(B)** 가 깨지면 **대립유전자 빈도는 거의 그대로**여도
-  유전자형 빈도가 **p²:2pq:q²에서 벗어납니다**(동형접합 과잉, 이형접합 부족).
-  → ②탭에서 '관찰 − 예상' 차이가 가장 잘 드러나는 조건입니다.
-- **세대 수(G)·이동 속도(H)·배경(I)·색상(J)** 은 관찰/표시 방식일 뿐, 유전자 빈도와 무관합니다.
+            """
+- **처음 A 비율(F)** 은 시작값만 바꿔요. 평형이 *유지되는지*와는 상관없어요.
+  조건만 다 맞으면 비율이 0.2든 0.8이든 그대로 유지돼요.
+- **개체군이 작으면(A)** 자연선택이 없어도 **우연(유전적 부동)** 만으로 비율이 출렁여요.
+  실험 번호를 바꿔 가며 확인해 보세요.
+- **자연선택(E)** 은 유형별 *생존율 차이*로 특정 유전자를 늘리거나 줄여요.
+- **돌연변이(C)·이주(D)** 는 유전자를 바꾸거나 바깥에서 들여와 비율을 바꿔요.
+- **무작위 짝짓기(B)** 가 깨지면 **유전자 비율은 거의 그대로**여도
+  유전자형 비율이 **예상값에서 벗어나요**(②탭의 '차이'가 가장 잘 드러나는 조건!).
+- **세대 수(G)·움직임 속도(H)·배경(I)·색칠(J)** 은 보기/표시 방식일 뿐이에요.
             """
         )
 
-# 푸터
 st.sidebar.markdown("---")
-st.sidebar.caption("고등학교 생명과학 · 하디-바인베르크 평형 탐구 · Streamlit")
+st.sidebar.caption("고등학교 생명과학 · 하디-바인베르크 평형 탐구")
